@@ -1,0 +1,254 @@
+[
+  {
+    "id": "wordpress",
+    "name": "WordPress",
+    "category": "CMS",
+    "match": {
+      "body": ["wp-content", "wp-includes", "/wp-json/"],
+      "regex": ["<meta name=\"generator\" content=\"WordPress"],
+      "headers": {},
+      "cookies": ["wordpress_", "wp-settings-"]
+    },
+    "path": "/wp-login.php",
+    "path_body": ["wp-submit", "user_login"]
+  },
+  {
+    "id": "joomla",
+    "name": "Joomla",
+    "category": "CMS",
+    "match": {
+      "body": ["/media/jui/", "com_content", "joomla!"],
+      "regex": ["<meta name=\"generator\" content=\"Joomla"]
+    },
+    "path": "/administrator/",
+    "path_body": ["com_login", "joomla"]
+  },
+  {
+    "id": "drupal",
+    "name": "Drupal",
+    "category": "CMS",
+    "match": {
+      "body": ["/sites/default/files", "drupal.settings", "drupal.js"],
+      "headers": { "x-generator": "Drupal" },
+      "cookies": ["SESS", "DRUPAL"]
+    },
+    "path": "/core/misc/drupal.js",
+    "path_body": ["drupal"]
+  },
+  {
+    "id": "discuz",
+    "name": "Discuz!",
+    "category": "CMS",
+    "match": {
+      "body": ["discuz", "forum.php", "/static/image/common/"],
+      "cookies": ["cdb_", "discuz_"]
+    },
+    "path": "/forum.php",
+    "path_body": ["discuz", "forum"]
+  },
+  {
+    "id": "dedecms",
+    "name": "DedeCMS（织梦）",
+    "category": "CMS",
+    "match": {
+      "body": ["/templets/", "dedecms", "power by dedecms", "/plus/"]
+    },
+    "path": "/plus/search.php",
+    "path_body": ["dedecms", "search"]
+  },
+  {
+    "id": "phpcms",
+    "name": "PHPCMS",
+    "category": "CMS",
+    "match": {
+      "body": ["phpcms", "/caches/", "phpcms2008"]
+    },
+    "path": "/index.php?m=member",
+    "path_body": ["phpcms"]
+  },
+  {
+    "id": "empirecms",
+    "name": "帝国CMS（EmpireCMS）",
+    "category": "CMS",
+    "match": {
+      "body": ["empirecms", "/e/class/", "帝国cms", "powered by empirecms"]
+    },
+    "path": "/e/admin/",
+    "path_body": ["empirecms", "登录"]
+  },
+  {
+    "id": "typecho",
+    "name": "Typecho",
+    "category": "CMS",
+    "match": {
+      "body": ["typecho", "usr/themes/", "/typecho"]
+    },
+    "path": "/admin/login.php",
+    "path_body": ["typecho"]
+  },
+  {
+    "id": "zblogphp",
+    "name": "Z-BlogPHP",
+    "category": "CMS",
+    "match": {
+      "body": ["zblogphp", "zb_system", "z-blog"]
+    },
+    "path": "/zb_system/login.php",
+    "path_body": ["zblog", "z-blog"]
+  },
+  {
+    "id": "ruoyi",
+    "name": "若依 RuoYi",
+    "category": "框架",
+    "match": {
+      "body": ["ruoyi", "若依", "ruoyi/"],
+      "cookies": ["JSESSIONID"]
+    },
+    "path": "/login",
+    "path_body": ["若依", "ruoyi"]
+  },
+  {
+    "id": "thinkphp",
+    "name": "ThinkPHP",
+    "category": "框架",
+    "match": {
+      "body": ["thinkphp", "think_exception", "think\\"],
+      "headers": { "x-powered-by": "ThinkPHP" }
+    },
+    "path": "/index.php",
+    "path_body": ["thinkphp", "think"]
+  },
+  {
+    "id": "springboot",
+    "name": "Spring Boot",
+    "category": "框架",
+    "match": {
+      "body": ["whitelabel error page", "spring boot"],
+      "headers": { "x-application-context": "" }
+    },
+    "path": "/actuator",
+    "path_body": ["_links", "status"]
+  },
+  {
+    "id": "struts2",
+    "name": "Struts2",
+    "category": "框架",
+    "match": {
+      "body": ["struts", "struts2", "action!"],
+      "headers": { "x-powered-by": "Struts2" }
+    },
+    "path": "/struts/",
+    "path_body": ["struts"]
+  },
+  {
+    "id": "shiro",
+    "name": "Apache Shiro",
+    "category": "框架",
+    "match": {
+      "body": ["org.apache.shiro", "shirofilter", "rememberme"],
+      "headers": { "set-cookie": "rememberMe" }
+    }
+  },
+  {
+    "id": "phpmyadmin",
+    "name": "phpMyAdmin",
+    "category": "应用",
+    "match": {
+      "body": ["phpmyadmin", "pma_username", "pma_password"],
+      "cookies": ["phpMyAdmin", "pma_lang"]
+    },
+    "path": "/phpmyadmin/",
+    "path_body": ["phpmyadmin", "pma_username"]
+  },
+  {
+    "id": "jenkins",
+    "name": "Jenkins",
+    "category": "应用",
+    "match": {
+      "body": ["jenkins", "hudson"],
+      "headers": { "x-jenkins": "" },
+      "cookies": ["JSESSIONID"]
+    },
+    "path": "/login",
+    "path_body": ["jenkins"]
+  },
+  {
+    "id": "gitlab",
+    "name": "GitLab",
+    "category": "应用",
+    "match": {
+      "body": ["gitlab", "gon.gitlab_url"],
+      "cookies": ["_gitlab_session"]
+    },
+    "path": "/users/sign_in",
+    "path_body": ["gitlab"]
+  },
+  {
+    "id": "grafana",
+    "name": "Grafana",
+    "category": "应用",
+    "match": {
+      "body": ["grafana-app", "grafana", "public/build/grafana"],
+      "cookies": ["grafana_session"]
+    },
+    "path": "/login",
+    "path_body": ["grafana"]
+  },
+  {
+    "id": "zabbix",
+    "name": "Zabbix",
+    "category": "应用",
+    "match": {
+      "body": ["zabbix", "zbx_", "zabbix sia"],
+      "cookies": ["zbx_session"]
+    },
+    "path": "/index.php",
+    "path_body": ["zabbix"]
+  },
+  {
+    "id": "nginx",
+    "name": "Nginx",
+    "category": "服务器",
+    "match": {
+      "headers": { "server": "nginx" }
+    }
+  },
+  {
+    "id": "apache",
+    "name": "Apache HTTPD",
+    "category": "服务器",
+    "match": {
+      "headers": { "server": "apache" }
+    }
+  },
+  {
+    "id": "tomcat",
+    "name": "Apache Tomcat",
+    "category": "服务器",
+    "match": {
+      "headers": { "server": "tomcat" },
+      "cookies": ["JSESSIONID"]
+    },
+    "path": "/docs/",
+    "path_body": ["tomcat", "apache tomcat"]
+  },
+  {
+    "id": "weblogic",
+    "name": "WebLogic",
+    "category": "服务器",
+    "match": {
+      "headers": { "server": "weblogic" },
+      "cookies": ["JSESSIONID"],
+      "body": ["weblogic", "error 404--not found"]
+    }
+  },
+  {
+    "id": "iis",
+    "name": "Microsoft IIS",
+    "category": "服务器",
+    "match": {
+      "headers": { "server": "microsoft-iis" },
+      "body": ["iis windows server"]
+    }
+  }
+]
