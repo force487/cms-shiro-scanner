@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "扫描目标（CMS + Shiro）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-u", "http://127.0.0.1:8080", "-v"]
+    },
+    {
+      "name": "只跑 CMS 指纹识别",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-u", "http://127.0.0.1:8080", "-m", "cms", "-v"]
+    },
+    {
+      "name": "只跑 Shiro 探测",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["-u", "http://127.0.0.1:8080", "-m", "shiro", "-v"]
+    },
+    {
+      "name": "启动本地模拟靶机",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/tests/mock_target.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
