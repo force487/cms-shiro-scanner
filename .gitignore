@@ -1,0 +1,16 @@
+# Python 运行时产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 本地备份包（备份留在本地即可，不提交进仓库）
+backups/
+
+# 扫描结果输出
+result.json
+*.log
+
+# 编辑器 / 系统垃圾
+.idea/
+.DS_Store
+Thumbs.db
