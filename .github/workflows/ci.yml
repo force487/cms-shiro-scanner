@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: 本地靶机冒烟测试
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 冒烟测试（起本地靶机 + 跑一次 CMS / Shiro 扫描）
+        run: |
+          python tests/mock_target.py &
+          MOCK_PID=$!
+          sleep 2
+          python main.py -u http://127.0.0.1:8080 -v | tee scan.log
+          echo "---- 断言 · 应识别出 WordPress ----"
+          grep -q "WordPress" scan.log
+          echo "---- 断言 · 应识别出 Apache Shiro ----"
+          grep -q "Apache Shiro" scan.log
+          kill "$MOCK_PID" 2>/dev/null || true
