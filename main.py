@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Dict, List
 
-from scanner import cms, shiro
+from scanner import cms, report, shiro
 from scanner.fingerprint import load_rules, load_wordlist
 from scanner.http_client import HttpClient, normalize_url
 from scanner.models import Finding
@@ -45,7 +45,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--shiro-dict", help="自定义 Shiro 路径字典路径")
     parser.add_argument("--min-score", type=int, default=2,
                         help="CMS 模块最低输出分数（默认 2）")
-    parser.add_argument("-o", "--output", help="把结果保存为 JSON 文件")
+    parser.add_argument("-o", "--output",
+                        help="保存结果：扩展名 .html 生成网页报告，其它为 JSON")
     parser.add_argument("-v", "--verbose", action="store_true", help="打印详细探测过程")
     return parser.parse_args(argv)
 
@@ -135,14 +136,21 @@ def main(argv: List[str]) -> int:
         all_results[target] = scan_one(client, target, args, rules, shiro_paths)
 
     if args.output:
-        payload = {
-            target: {module: [f.to_dict() for f in findings]
-                     for module, findings in modules_map.items()}
-            for target, modules_map in all_results.items()
-        }
-        with open(args.output, "w", encoding="utf-8") as fp:
-            json.dump(payload, fp, ensure_ascii=False, indent=2)
-        print(f"\n[*] 结果已保存：{os.path.abspath(args.output)}")
+        if args.output.lower().endswith((".html", ".htm")):
+            path = report.write_html_report(
+                all_results, args.output,
+                meta={"modules": sorted(modules), "version": "1.0.0"},
+            )
+            print(f"\n[*] HTML 报告已生成：{path}")
+        else:
+            payload = {
+                target: {module: [f.to_dict() for f in findings]
+                         for module, findings in modules_map.items()}
+                for target, modules_map in all_results.items()
+            }
+            with open(args.output, "w", encoding="utf-8") as fp:
+                json.dump(payload, fp, ensure_ascii=False, indent=2)
+            print(f"\n[*] 结果已保存：{os.path.abspath(args.output)}")
 
     print("\n[*] 扫描结束。")
     return 0

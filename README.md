@@ -100,6 +100,7 @@ python main.py -u http://target.com -m cms         # 只跑 CMS 模块
 python main.py -u http://target.com -m shiro       # 只跑 Shiro 模块
 python main.py -u http://target.com -v             # 打印每一步探测过程
 python main.py -u http://target.com -o result.json # 结果额外保存为 JSON
+python main.py -u http://target.com -o report.html # 生成 HTML 网页报告（浏览器打开）
 python main.py -u http://target.com --cms-dict my.json   # 换自己的指纹字典
 python main.py -u http://target.com --min-score 4        # 提高输出阈值，减少误报
 ```
