@@ -1,0 +1,8 @@
+# 本项目只使用 Python 标准库（urllib / json / re / ssl / http.server），
+# 不需要安装任何第三方依赖。
+#
+# 因此这里的依赖列表为空：
+#   pip install -r requirements.txt   # 会直接提示 "nothing to install"
+#
+# 唯一的环境要求是 Python 3.8 及以上版本：
+#   python --version
