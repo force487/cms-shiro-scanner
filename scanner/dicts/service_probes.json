@@ -104,8 +104,8 @@
     "ports": [3306],
     "probe": null,
     "ssl": false,
-    "regex": ["mysql", "mariadb"],
-    "note": "关系型数据库（握手包含版本串）"
+    "regex": ["mysql", "mariadb", "caching_sha2_password", "mysql_native_password", "mysql_clear_password"],
+    "note": "关系型数据库（握手包含认证插件特征）"
   },
   {
     "id": "postgresql",
