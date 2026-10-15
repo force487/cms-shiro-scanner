@@ -1,0 +1,146 @@
+[
+  {
+    "id": "ftp",
+    "name": "FTP",
+    "ports": [21],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^220[ -]"],
+    "note": "文件传输服务（220 开头欢迎语）"
+  },
+  {
+    "id": "ssh",
+    "name": "SSH",
+    "ports": [22],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^SSH-"],
+    "note": "安全外壳（SSH- 版本握手）"
+  },
+  {
+    "id": "smtp",
+    "name": "SMTP",
+    "ports": [25, 587],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^220[ -]"],
+    "note": "邮件传输（220 欢迎语）"
+  },
+  {
+    "id": "http",
+    "name": "HTTP",
+    "ports": [80, 8000, 8080, 8081, 8888],
+    "probe": "GET / HTTP/1.0\r\nHost: {host}\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n",
+    "ssl": false,
+    "regex": ["^HTTP/1\\.[01]\\s"],
+    "note": "Web 服务（HTTP 协议响应）"
+  },
+  {
+    "id": "pop3",
+    "name": "POP3",
+    "ports": [110],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^\\+OK"],
+    "note": "收件服务（+OK 欢迎语）"
+  },
+  {
+    "id": "imap",
+    "name": "IMAP",
+    "ports": [143],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^\\* OK"],
+    "note": "收件服务（* OK 欢迎语）"
+  },
+  {
+    "id": "https",
+    "name": "HTTPS",
+    "ports": [443, 8443],
+    "probe": "GET / HTTP/1.0\r\nHost: {host}\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n",
+    "ssl": true,
+    "regex": ["^HTTP/1\\.[01]\\s"],
+    "note": "Web 服务（TLS 加密，HTTP 协议响应）"
+  },
+  {
+    "id": "imaps",
+    "name": "IMAPS",
+    "ports": [993],
+    "probe": null,
+    "ssl": true,
+    "regex": ["^\\* OK"],
+    "note": "收件服务（TLS 加密）"
+  },
+  {
+    "id": "pop3s",
+    "name": "POP3S",
+    "ports": [995],
+    "probe": null,
+    "ssl": true,
+    "regex": ["^\\+OK"],
+    "note": "收件服务（TLS 加密）"
+  },
+  {
+    "id": "vnc",
+    "name": "VNC",
+    "ports": [5900, 5901],
+    "probe": null,
+    "ssl": false,
+    "regex": ["^RFB "],
+    "note": "远程桌面（RFB 握手）"
+  },
+  {
+    "id": "redis",
+    "name": "Redis",
+    "ports": [6379],
+    "probe": "*1\r\n$4\r\nPING\r\n",
+    "ssl": false,
+    "regex": ["^\\+PONG"],
+    "note": "内存数据库（PING 回 PONG）"
+  },
+  {
+    "id": "mysql",
+    "name": "MySQL",
+    "ports": [3306],
+    "probe": null,
+    "ssl": false,
+    "regex": ["mysql", "mariadb"],
+    "note": "关系型数据库（握手包含版本串）"
+  },
+  {
+    "id": "postgresql",
+    "name": "PostgreSQL",
+    "ports": [5432],
+    "probe": "\\x00\\x00\\x00\\x08\\x04\\xd2\\x16\\x2f",
+    "ssl": false,
+    "regex": ["FATAL", "auth", "password", "non", "SSL"],
+    "note": "关系型数据库（Startup 报文响应）"
+  },
+  {
+    "id": "elasticsearch",
+    "name": "Elasticsearch",
+    "ports": [9200, 9300],
+    "probe": "GET / HTTP/1.0\r\nHost: {host}\r\n\r\n",
+    "ssl": false,
+    "regex": ["cluster_name", "You Know, for Search", "tagline"],
+    "note": "搜索引擎（返回集群 JSON）"
+  },
+  {
+    "id": "memcached",
+    "name": "Memcached",
+    "ports": [11211],
+    "probe": "stats\r\n",
+    "ssl": false,
+    "regex": ["^STAT "],
+    "note": "缓存服务（stats 响应）"
+  },
+  {
+    "id": "mongodb",
+    "name": "MongoDB",
+    "ports": [27017],
+    "probe": null,
+    "ssl": false,
+    "regex": ["mongodb", "maxBsonObjectSize"],
+    "note": "文档数据库（握手包含特征）"
+  }
+]

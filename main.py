@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Dict, List
 
-from scanner import cms, report, shiro
+from scanner import cms, ports, report, shiro
 from scanner.fingerprint import load_rules, load_wordlist
 from scanner.http_client import HttpClient, normalize_url
 from scanner.models import Finding
@@ -38,11 +38,14 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("-u", "--url", action="append", default=[],
                         help="目标 URL，可重复指定多个")
     parser.add_argument("-f", "--file", help="从文本文件读取目标 URL（一行一个）")
-    parser.add_argument("-m", "--modules", default="cms,shiro",
-                        help="要运行的模块，逗号分隔：cms,shiro（默认全部）")
+    parser.add_argument("-m", "--modules", default="cms,shiro,ports",
+                        help="要运行的模块，逗号分隔：cms,shiro,ports（默认全部）")
     parser.add_argument("--timeout", type=float, default=8.0, help="单次请求超时秒数")
     parser.add_argument("--cms-dict", help="自定义 CMS 指纹字典路径")
     parser.add_argument("--shiro-dict", help="自定义 Shiro 路径字典路径")
+    parser.add_argument("-p", "--ports", help="要扫描的端口，如 80,443,3306 或 1-1000")
+    parser.add_argument("--port-threads", type=int, default=200, help="端口扫描并发线程数")
+    parser.add_argument("--service-dict", help="自定义服务探测字典路径")
     parser.add_argument("--min-score", type=int, default=2,
                         help="CMS 模块最低输出分数（默认 2）")
     parser.add_argument("-o", "--output",
@@ -83,7 +86,8 @@ def print_findings(findings: List[Finding]) -> None:
 
 
 def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
-             rules: List[dict], shiro_paths: List[str]) -> Dict[str, List[Finding]]:
+             rules: List[dict], shiro_paths: List[str],
+             probes: dict, ports_spec: List[int]) -> Dict[str, List[Finding]]:
     print(f"\n[*] 目标：{target}")
     started = time.time()
     result: Dict[str, List[Finding]] = {}
@@ -99,6 +103,15 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
         result["shiro"] = shiro.run(client, target, shiro_paths, verbose=args.verbose)
         print_findings(result["shiro"])
 
+    if "ports" in args.modules:
+        print("  [端口与服务探测]")
+        result["ports"] = ports.run(
+            target, ports=ports_spec, probes=probes,
+            timeout=min(args.timeout, 3.0), threads=args.port_threads,
+            verbose=args.verbose,
+        )
+        print_findings(result["ports"])
+
     print(f"  [完成] 用时 {time.time() - started:.2f}s")
     return result
 
@@ -113,9 +126,9 @@ def main(argv: List[str]) -> int:
         return 2
 
     modules = {m.strip().lower() for m in args.modules.split(",") if m.strip()}
-    unknown = modules - {"cms", "shiro"}
+    unknown = modules - {"cms", "shiro", "ports"}
     if unknown:
-        print(f"[!] 未知模块：{', '.join(unknown)}（只支持 cms / shiro）")
+        print(f"[!] 未知模块：{', '.join(unknown)}（只支持 cms / shiro / ports）")
         return 2
 
     print("=" * 62)
@@ -125,15 +138,20 @@ def main(argv: List[str]) -> int:
 
     rules = load_rules(args.cms_dict) if "cms" in modules else []
     shiro_paths = load_wordlist(args.shiro_dict) if "shiro" in modules else []
+    probes = ports.load_probes(args.service_dict) if "ports" in modules else {}
+    ports_spec = ports.parse_ports(args.ports) if "ports" in modules else None
     if "cms" in modules:
         print(f"[*] 已加载 CMS 指纹规则 {len(rules)} 条")
     if "shiro" in modules:
         print(f"[*] 已加载 Shiro 探测路径 {len(shiro_paths)} 条")
+    if "ports" in modules:
+        print(f"[*] 已加载服务探测规则 {len(probes.get('map', {}))} 条")
 
     client = HttpClient(timeout=args.timeout)
     all_results: Dict[str, Dict[str, List[Finding]]] = {}
     for target in targets:
-        all_results[target] = scan_one(client, target, args, rules, shiro_paths)
+        all_results[target] = scan_one(client, target, args, rules, shiro_paths,
+                                       probes, ports_spec)
 
     if args.output:
         if args.output.lower().endswith((".html", ".htm")):

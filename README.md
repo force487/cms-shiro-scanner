@@ -1,12 +1,13 @@
-# CMS 指纹识别 + Shiro 探测扫描器
+# CMS 指纹识别 + Shiro 探测 + 端口服务扫描器
 
 一个用 **纯 Python 标准库**写成的轻量级 Web 安全扫描器（教学 / 授权测试用途），
-当前实现两个功能模块：
+当前实现三个功能模块：
 
 | 模块 | 作用 | 核心手段 |
 | --- | --- | --- |
 | `cms` | 识别目标站点的建站系统（CMS / 框架 / 服务器） | 字典匹配响应特征：HTML 关键字、响应头、正则、Set-Cookie、响应路径二次确认 |
 | `shiro` | 判断后端是否使用 Apache Shiro | 发送 `rememberMe=deleteMe` 观察响应回显 + 目录路径字典探测 |
+| `ports` | 探测开放端口并识别服务类型 | 对端口做 TCP 连接，发协议探测包，用正则匹配返回的 banner |
 
 > ⚠️ **免责声明**：本项目仅用于安全学习、CTF 与**已获授权**的渗透测试。
 > 请勿对未授权的目标使用，由此产生的一切后果由使用者自行承担。
@@ -20,6 +21,7 @@
 - **可解释的结果**：每条结论都会列出命中的证据（哪一行响应头、哪个关键字），不是黑盒打分。
 - **加权打分 + 置信度**：区分“硬特征”（响应头 / Cookie）和“软特征”（正文关键字），输出 high / medium / low。
 - **二次确认**：指纹在首页命中后，会再请求该 CMS 的特征路径（如 `/wp-login.php`）复核，降低误报。
+- **端口 / 服务探测**：TCP 连接 + 协议探测包 + 正则识别 banner，覆盖 SSH / HTTP(S) / FTP / SMTP / Redis / MySQL 等常见服务。
 - **可扩展**：新增模块只需要写一个 `run(client, base_url, ...)` 函数。
 
 ---
@@ -40,9 +42,11 @@ cms_shiro_scanner/
 │   ├── fingerprint.py          # ★ 核心：字典匹配引擎
 │   ├── cms.py                  # CMS 指纹识别模块
 │   ├── shiro.py                # Shiro 探测模块
+│   ├── ports.py                # 端口与服务探测模块
 │   └── dicts/
 │       ├── cms_rules.json      # CMS 指纹字典（24 条规则）
-│       └── shiro_paths.txt     # Shiro 目录路径字典（16 条路径）
+│       ├── shiro_paths.txt     # Shiro 目录路径字典（16 条路径）
+│       └── service_probes.json # 服务探测字典（端口 + 探测包 + 正则）
 ├── tests/
 │   └── mock_target.py          # 本地模拟靶机，用于安全地验证扫描效果
 └── backups/
@@ -72,8 +76,8 @@ python --version        # 例如 Python 3.12.10
 1. 用 VS Code 打开 `cms_shiro_scanner` 文件夹；
 2. 按 `F5`，在下拉框里选择配置：
    - `启动本地模拟靶机` —— 先跑这个，把本地靶机起在 `http://127.0.0.1:8080`
-   - `扫描目标（CMS + Shiro）` —— 再跑这个，扫描本地靶机
-   - `只跑 CMS 指纹识别` / `只跑 Shiro 探测` —— 单独跑某个模块
+   - `扫描目标（全部模块）` —— 再跑这个，扫描本地靶机（CMS + Shiro + 端口）
+   - `只跑 CMS 指纹识别` / `只跑 Shiro 探测` / `只跑端口与服务探测` —— 单独跑某个模块
 3. 想扫真实目标，只要改 `.vscode/launch.json` 里 `args` 的 `-u` 后面的地址即可。
 
 ### 方式二：命令行
@@ -98,6 +102,9 @@ python main.py -u http://a.com -u http://b.com     # 扫描多个目标
 python main.py -f urls.txt                         # 从文件批量读取目标
 python main.py -u http://target.com -m cms         # 只跑 CMS 模块
 python main.py -u http://target.com -m shiro       # 只跑 Shiro 模块
+python main.py -u http://target.com -m ports       # 只跑端口/服务探测（默认常见端口）
+python main.py -u http://target.com -m ports -p 80,443,3306   # 指定端口
+python main.py -u http://target.com -m ports -p 1-1000 --port-threads 300
 python main.py -u http://target.com -v             # 打印每一步探测过程
 python main.py -u http://target.com -o result.json # 结果额外保存为 JSON
 python main.py -u http://target.com -o report.html # 生成 HTML 网页报告（浏览器打开）
@@ -194,6 +201,15 @@ CMS 模块默认丢弃总分 `< 2` 的结果（可用 `--min-score` 调整）。
 > 如果解密失败会把 Cookie 置为 `deleteMe` 并写回响应头。
 > 所以只要我们能“诱使”它回写 `deleteMe`，就等于确认了 Shiro 的存在。
 
+### 4. 端口与服务探测流程
+
+1. 从目标 URL 提取主机名，决定要扫的端口（默认扫常见端口，或 `-p` 指定）；
+2. 对每个端口做 TCP 连接（多线程并发），连不上直接跳过，连上继续；
+3. 按该端口对应的协议发探测包——有的服务（SSH / FTP / SMTP）一连上就自己报
+   banner，这时只读不发；有的（HTTP / Redis / Memcached）要先发包才会回；
+   HTTPS 类端口先做 TLS 握手再发包；
+4. 用正则匹配返回数据识别服务类型，并把原始 banner 作为证据列出。
+
 ---
 
 ## 自定义字典
@@ -228,6 +244,26 @@ CMS 模块默认丢弃总分 `< 2` 的结果（可用 `--min-score` 调整）。
 /后台
 /admin/index.php
 ```
+
+### 新增一条服务探测规则
+
+编辑 `scanner/dicts/service_probes.json`，追加一个对象即可，**不需要改代码**：
+
+```json
+{
+  "id": "my-service",
+  "name": "我的服务",
+  "ports": [7777],
+  "probe": "PING\r\n",
+  "ssl": false,
+  "regex": ["^PONG"],
+  "note": "我的服务（PING 回 PONG）"
+}
+```
+
+- `probe`：主动探测包，`null` 表示只被动读 banner；支持 `\r\n`、`\xNN` 转义。
+- `ssl`：是否先做 TLS 握手（HTTPS 类端口用）。
+- `regex`：对返回数据做的正则（不区分大小写），任一命中即识别为 `name`。
 
 ---
 
@@ -280,6 +316,13 @@ CMS 模块默认丢弃总分 `< 2` 的结果（可用 `--min-score` 调整）。
   各命中路径作为证据列出。
 - 修正 3（效率）：目标不可达时仍会把整个路径字典跑一遍（17 次请求白等）。
   改为首页探测失败就**短路返回**，直接提示“目标不可达，跳过路径字典探测”。
+
+**Step 8 —— 端口与服务探测模块**
+- 新增：`ports.py`（TCP 连接 + 协议探测包 + 正则识别）+ `dicts/service_probes.json`
+  （16 条探测规则：SSH/HTTP/Redis/MySQL 等）；`main.py` 增加 `-p` / `--port-threads`
+  / `--service-dict` 参数，报告新增“端口与服务探测”区块。
+- 设计理由：端口探测和 CMS/Shiro 走同一套“可解释结论”输出；识别靠“发对应协议
+  探测包 + 正则匹配 banner”，并对没有专属规则的端口做通用 HTTP 探测兜底。
 
 ---
 

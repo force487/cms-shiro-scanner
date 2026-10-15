@@ -16,8 +16,8 @@ from typing import Dict, List, Optional
 from .models import Finding
 
 CONFIDENCE_LABEL = {"high": "高", "medium": "中", "low": "低", "none": "无"}
-MODULE_LABEL = {"cms": "CMS 指纹识别", "shiro": "Shiro 探测"}
-MODULE_ORDER = ["cms", "shiro"]
+MODULE_LABEL = {"cms": "CMS 指纹识别", "shiro": "Shiro 探测", "ports": "端口与服务探测"}
+MODULE_ORDER = ["cms", "shiro", "ports"]
 
 _STYLE = """
 :root{
