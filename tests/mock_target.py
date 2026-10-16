@@ -32,6 +32,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/fetch?url=http://example.com">远程抓取</a>
 <a href="/goto?url=http://example.com">跳转</a>
 <a href="/crlf?next=http://example.com">跳转(CRLF)</a>
+<a href="/pollute?q=guest">参数污染</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form>
@@ -184,6 +185,11 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(302, "", extra={"Location": target})
             else:
                 self._send(400, "缺少 next 参数")
+        elif path == "/pollute":
+            # 故意取重复参数的"最后一个值" —— 用来验证 HTTP 参数污染
+            vals = parse_qs(urlparse(self.path).query).get("q", [])
+            chosen = vals[-1] if vals else "guest"
+            self._send(200, f"<html><body>当前配置值：{chosen}</body></html>")
         elif path in SENSITIVE_FILES:
             self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
