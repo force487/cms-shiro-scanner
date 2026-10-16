@@ -16,8 +16,8 @@ from typing import Dict, List, Optional
 from .models import Finding
 
 CONFIDENCE_LABEL = {"high": "高", "medium": "中", "low": "低", "none": "无"}
-MODULE_LABEL = {"cms": "CMS 指纹识别", "shiro": "Shiro 探测", "ports": "端口与服务探测", "sqli": "SQL 注入检测", "xss": "XSS 检测", "upload": "文件上传检测", "rce": "命令注入检测", "lfi": "文件包含检测", "dirscan": "敏感文件/目录扫描", "ssrf": "SSRF 检测", "csrf": "CSRF 检测", "xxe": "XXE 检测"}
-MODULE_ORDER = ["cms", "shiro", "ports", "sqli", "xss", "upload", "rce", "lfi", "dirscan", "ssrf", "csrf", "xxe"]
+MODULE_LABEL = {"cms": "CMS 指纹识别", "shiro": "Shiro 探测", "ports": "端口与服务探测", "sqli": "SQL 注入检测", "xss": "XSS 检测", "upload": "文件上传检测", "rce": "命令注入检测", "lfi": "文件包含检测", "dirscan": "敏感文件/目录扫描", "ssrf": "SSRF 检测", "csrf": "CSRF 检测", "xxe": "XXE 检测", "redirect": "开放重定向"}
+MODULE_ORDER = ["cms", "shiro", "ports", "sqli", "xss", "upload", "rce", "lfi", "dirscan", "ssrf", "csrf", "xxe", "redirect"]
 
 _STYLE = """
 :root{
