@@ -1,0 +1,10 @@
+{
+  "headers": [
+    {"name": "strict-transport-security", "label": "HSTS（严格传输安全）", "score": 2, "note": "未强制浏览器使用 HTTPS"},
+    {"name": "x-content-type-options", "label": "X-Content-Type-Options", "score": 2, "note": "应设为 nosniff 防止 MIME 嗅探", "expected": ["nosniff"]},
+    {"name": "x-frame-options", "label": "X-Frame-Options（防点击劫持）", "score": 3, "note": "应设为 DENY 或 SAMEORIGIN", "expected": ["deny", "sameorigin"]},
+    {"name": "content-security-policy", "label": "Content-Security-Policy", "score": 3, "note": "缺失 CSP 削弱 XSS 与注入防护"},
+    {"name": "referrer-policy", "label": "Referrer-Policy", "score": 1, "note": "缺失可能泄露来源 URL"},
+    {"name": "permissions-policy", "label": "Permissions-Policy", "score": 1, "note": "缺失未限制浏览器特性权限"}
+  ]
+}
