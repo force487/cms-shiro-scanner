@@ -112,7 +112,10 @@ class MockHandler(BaseHTTPRequestHandler):
         has_delete_me = "rememberme=deleteme" in cookie.lower()
 
         if path in ("/", "/index.php"):
-            self._send(200, WORDPRESS_HOME, extra={"X-Powered-By": "PHP/8.1.27"})
+            self._send(200, WORDPRESS_HOME, extra={
+                "X-Powered-By": "PHP/8.1.27",
+                "X-Frame-Options": "ALLOWALL",
+            })
         elif path == "/wp-login.php":
             self._send(200, WP_LOGIN)
         elif path == "/search":
