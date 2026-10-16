@@ -176,6 +176,47 @@ class HttpClient:
                 elapsed=time.time() - start,
             )
 
+    def post_raw(
+        self,
+        url: str,
+        body: str,
+        content_type: str = "application/xml",
+        headers: Optional[Dict[str, str]] = None,
+        follow_redirect: Optional[bool] = None,
+    ) -> HttpResponse:
+        """发一个 POST 请求，body 为原始文本（默认 XML），用于 XXE 等检测。"""
+        url = normalize_url(url)
+        req_headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "*/*",
+            "Connection": "close",
+            "Content-Type": content_type,
+        }
+        if headers:
+            req_headers.update(headers)
+
+        body_bytes = body.encode("utf-8") if isinstance(body, str) else body
+        request = urllib.request.Request(url, data=body_bytes, headers=req_headers, method="POST")
+        opener = self._opener
+        if follow_redirect is True:
+            opener = self._opener_follow
+        elif follow_redirect is False:
+            opener = self._opener_plain
+
+        start = time.time()
+        try:
+            with opener.open(request, timeout=self.timeout) as resp:
+                raw = resp.read()
+                return self._build(url, resp.status, resp.headers, raw, start)
+        except urllib.error.HTTPError as exc:
+            raw = exc.read() if hasattr(exc, "read") else b""
+            return self._build(url, exc.code, exc.headers, raw, start)
+        except Exception as exc:  # noqa: BLE001 - 扫描器不能被单个目标打断
+            return HttpResponse(
+                url=url, status=0, error=f"{type(exc).__name__}: {exc}",
+                elapsed=time.time() - start,
+            )
+
     # ------------------------------------------------------------------ #
     # 内部工具
     # ------------------------------------------------------------------ #
