@@ -14,7 +14,8 @@
 
 import re
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 WORDPRESS_HOME = """<!DOCTYPE html>
@@ -28,6 +29,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/reflect?q=hello">留言板</a>
 <a href="/ping?host=127.0.0.1">网络诊断</a>
 <a href="/view?file=about.txt">查看页面</a>
+<a href="/fetch?url=http://example.com">远程抓取</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form></body>
@@ -135,6 +137,17 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(200, "; for 16-bit app support\n[fonts]\n[extensions]\n[mci extensions]")
             else:
                 self._send(200, "<html><body><h1>关于我们</h1><p>这是静态页面内容。</p></body></html>")
+        elif path == "/fetch":
+            # 故意把 url 参数交给服务端去请求 —— 用来验证 SSRF 检测
+            target_url = "".join(parse_qs(urlparse(self.path).query).get("url", []))
+            if not target_url:
+                self._send(400, "缺少 url 参数")
+            else:
+                try:
+                    with urllib.request.urlopen(target_url, timeout=3) as r:
+                        self._send(200, r.read().decode("utf-8", "replace"))
+                except Exception as exc:  # noqa: BLE001
+                    self._send(200, f"抓取失败：{exc}")
         elif path in SENSITIVE_FILES:
             self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
@@ -192,7 +205,7 @@ class MockHandler(BaseHTTPRequestHandler):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    httpd = HTTPServer(("127.0.0.1", port), MockHandler)
+    httpd = ThreadingHTTPServer(("127.0.0.1", port), MockHandler)
     print(f"[mock] 模拟靶机已启动： http://127.0.0.1:{port}  （Ctrl+C 停止）")
     try:
         httpd.serve_forever()
