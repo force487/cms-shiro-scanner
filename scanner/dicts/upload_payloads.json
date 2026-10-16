@@ -1,0 +1,7 @@
+{
+  "files": [
+    {"ext": "php", "content": "<?php echo '{marker}'; ?>", "mime": "application/octet-stream", "note": "PHP 脚本"},
+    {"ext": "jsp", "content": "<%out.print(\"{marker}\");%>", "mime": "application/octet-stream", "note": "JSP 脚本"},
+    {"ext": "asp", "content": "<%Response.Write(\"{marker}\")%>", "mime": "application/octet-stream", "note": "ASP 脚本"}
+  ]
+}

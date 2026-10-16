@@ -12,6 +12,7 @@
     python main.py -u http://127.0.0.1:8080 -v
 """
 
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -24,7 +25,10 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 </head>
 <body><h1>My Site</h1><a href="/wp-json/wp/v2/posts">REST API</a>
 <a href="/search?id=1">站内搜索</a>
-<a href="/reflect?q=hello">留言板</a></body>
+<a href="/reflect?q=hello">留言板</a>
+<form action="/upload" method="post" enctype="multipart/form-data">
+  上传：<input type="file" name="file"><input type="submit" value="上传">
+</form></body>
 </html>
 """
 
@@ -40,6 +44,32 @@ SHIRO_LOGIN = """<html><head><title>若依后台管理系统</title></head>
   <!-- org.apache.shiro.web.filter.authc.FormAuthenticationFilter -->
 </body></html>
 """
+
+
+# 保存上传的文件，模拟"上传后可通过 /uploads/<name> 访问并执行"
+UPLOADED = {}
+
+
+def parse_multipart(body, content_type):
+    """极简 multipart 解析：返回 (filename, content)。"""
+    if not content_type:
+        return None, b""
+    m = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', content_type)
+    if not m:
+        return None, b""
+    boundary = (m.group(1) or m.group(2)).strip()
+    boundary_bytes = ("--" + boundary).encode("utf-8")
+    filename = None
+    content = b""
+    for part in body.split(boundary_bytes):
+        if b"filename=" in part:
+            fn = re.search(rb'filename="([^"]+)"', part)
+            if fn:
+                filename = fn.group(1).decode("utf-8", "replace")
+            idx = part.find(b"\r\n\r\n")
+            if idx != -1:
+                content = part[idx + 4:].rstrip(b"\r\n")
+    return filename, content
 
 
 class MockHandler(BaseHTTPRequestHandler):
@@ -70,6 +100,14 @@ class MockHandler(BaseHTTPRequestHandler):
             # 故意不转义，把 q 原样反射进 HTML —— 用来验证反射型 XSS 检测
             q = "".join(parse_qs(urlparse(self.path).query).get("q", []))
             self._send(200, f"<html><body><h1>留言板</h1><p>内容：{q}</p></body></html>")
+        elif path.startswith("/uploads/"):
+            name = path.split("/")[-1]
+            content = UPLOADED.get(name)
+            if content is not None:
+                # 模拟"执行"：直接把上传文件内容回显出来
+                self._send(200, content.decode("utf-8", "replace"))
+            else:
+                self._send(404, "<html><body>404 Not Found</body></html>")
         elif path in ("/login", "/admin/login", "/doLogin", "/user/login"):
             if has_delete_me:
                 # Shiro 命中 deleteMe 时的经典表现：回写 deleteMe 并 302
@@ -80,6 +118,21 @@ class MockHandler(BaseHTTPRequestHandler):
             else:
                 self._send(200, SHIRO_LOGIN,
                            extra_cookies=["JSESSIONID=8A1B2C3D; Path=/"])
+        else:
+            self._send(404, "<html><body>404 Not Found</body></html>")
+
+    def do_POST(self):  # noqa: N802 - http.server 约定的方法名
+        path = urlparse(self.path).path
+        if path == "/upload":
+            content_type = self.headers.get("Content-Type", "")
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = self.rfile.read(length)
+            filename, content = parse_multipart(body, content_type)
+            if filename and content:
+                UPLOADED[filename] = content
+                self._send(200, f"上传成功！文件保存在 /uploads/{filename}")
+            else:
+                self._send(400, "上传失败：未解析到文件")
         else:
             self._send(404, "<html><body>404 Not Found</body></html>")
 

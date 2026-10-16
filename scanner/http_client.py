@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from typing import Dict, List, Optional
 
 from .models import HttpResponse
@@ -97,6 +98,76 @@ class HttpClient:
                 return self._build(url, resp.status, resp.headers, raw, start)
         except urllib.error.HTTPError as exc:
             # 4xx / 5xx（以及关闭重定向后的 3xx）都会走到这里
+            raw = exc.read() if hasattr(exc, "read") else b""
+            return self._build(url, exc.code, exc.headers, raw, start)
+        except Exception as exc:  # noqa: BLE001 - 扫描器不能被单个目标打断
+            return HttpResponse(
+                url=url, status=0, error=f"{type(exc).__name__}: {exc}",
+                elapsed=time.time() - start,
+            )
+
+    def post(
+        self,
+        url: str,
+        data: Optional[Dict[str, str]] = None,
+        files: Optional[Dict[str, tuple]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        follow_redirect: Optional[bool] = None,
+    ) -> HttpResponse:
+        """发一个 POST 请求，支持 multipart 文件上传。
+
+        files 形如 {字段名: (文件名, 内容, MIME)}，data 为普通表单字段。
+        异常处理与 get() 一致，记进 HttpResponse.error。
+        """
+        url = normalize_url(url)
+        req_headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "*/*",
+            "Connection": "close",
+        }
+        if headers:
+            req_headers.update(headers)
+
+        body: Optional[bytes] = None
+        if files:
+            boundary = "----WebScanner" + uuid.uuid4().hex
+            req_headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+            chunks: List[bytes] = []
+            for field, value in (data or {}).items():
+                chunks.append(
+                    f"--{boundary}\r\nContent-Disposition: form-data; "
+                    f'name="{field}"\r\n\r\n{value}\r\n'.encode("utf-8")
+                )
+            for field, fileinfo in files.items():
+                filename, content, mime = fileinfo
+                content_bytes = content if isinstance(content, bytes) \
+                    else str(content).encode("utf-8")
+                chunks.append(
+                    f"--{boundary}\r\nContent-Disposition: form-data; "
+                    f'name="{field}"; filename="{filename}"\r\n'
+                    f"Content-Type: {mime}\r\n\r\n".encode("utf-8")
+                )
+                chunks.append(content_bytes)
+                chunks.append(b"\r\n")
+            chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+            body = b"".join(chunks)
+        elif data:
+            req_headers["Content-Type"] = "application/x-www-form-urlencoded"
+            body = urllib.parse.urlencode(data).encode("utf-8")
+
+        request = urllib.request.Request(url, data=body, headers=req_headers, method="POST")
+        opener = self._opener
+        if follow_redirect is True:
+            opener = self._opener_follow
+        elif follow_redirect is False:
+            opener = self._opener_plain
+
+        start = time.time()
+        try:
+            with opener.open(request, timeout=self.timeout) as resp:
+                raw = resp.read()
+                return self._build(url, resp.status, resp.headers, raw, start)
+        except urllib.error.HTTPError as exc:
             raw = exc.read() if hasattr(exc, "read") else b""
             return self._build(url, exc.code, exc.headers, raw, start)
         except Exception as exc:  # noqa: BLE001 - 扫描器不能被单个目标打断
