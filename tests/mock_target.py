@@ -30,6 +30,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/ping?host=127.0.0.1">网络诊断</a>
 <a href="/view?file=about.txt">查看页面</a>
 <a href="/fetch?url=http://example.com">远程抓取</a>
+<a href="/goto?url=http://example.com">跳转</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form>
@@ -159,6 +160,13 @@ class MockHandler(BaseHTTPRequestHandler):
                         self._send(200, r.read().decode("utf-8", "replace"))
                 except Exception as exc:  # noqa: BLE001
                     self._send(200, f"抓取失败：{exc}")
+        elif path == "/goto":
+            # 故意把 url 参数当跳转目标 —— 用来验证开放重定向检测
+            target_url = "".join(parse_qs(urlparse(self.path).query).get("url", []))
+            if not target_url:
+                self._send(400, "缺少 url 参数")
+            else:
+                self._send(302, "", extra={"Location": target_url})
         elif path in SENSITIVE_FILES:
             self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
