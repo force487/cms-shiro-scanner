@@ -1,0 +1,8 @@
+{
+  "token_patterns": ["csrf", "token", "authenticity", "xsrf", "nonce", "anti_forgery", "_token"],
+  "sensitive_keywords": [
+    "login", "logout", "password", "passwd", "pwd", "email", "transfer",
+    "pay", "order", "delete", "remove", "update", "edit", "profile",
+    "account", "setting", "reset", "money", "balance", "admin", "upload"
+  ]
+}
