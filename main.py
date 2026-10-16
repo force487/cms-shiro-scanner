@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Dict, List
 
-from scanner import cms, ports, report, shiro, sqli, upload, xss
+from scanner import cms, ports, rce, report, shiro, sqli, upload, xss
 from scanner.fingerprint import load_rules, load_wordlist
 from scanner.http_client import HttpClient, normalize_url
 from scanner.models import Finding
@@ -39,7 +39,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help="目标 URL，可重复指定多个")
     parser.add_argument("-f", "--file", help="从文本文件读取目标 URL（一行一个）")
     parser.add_argument("-m", "--modules", default="cms,shiro,ports",
-                        help="要运行的模块，逗号分隔：cms,shiro,ports,sqli,xss,upload（默认 cms,shiro,ports）")
+                        help="要运行的模块，逗号分隔：cms,shiro,ports,sqli,xss,upload,rce（默认 cms,shiro,ports）")
     parser.add_argument("--timeout", type=float, default=8.0, help="单次请求超时秒数")
     parser.add_argument("--cms-dict", help="自定义 CMS 指纹字典路径")
     parser.add_argument("--shiro-dict", help="自定义 Shiro 路径字典路径")
@@ -49,6 +49,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--sqli-dict", help="自定义 SQL 注入 payload 字典路径")
     parser.add_argument("--xss-dict", help="自定义 XSS payload 字典路径")
     parser.add_argument("--upload-dict", help="自定义文件上传 payload 字典路径")
+    parser.add_argument("--rce-dict", help="自定义命令注入 payload 字典路径")
     parser.add_argument("--min-score", type=int, default=2,
                         help="CMS 模块最低输出分数（默认 2）")
     parser.add_argument("-o", "--output",
@@ -93,7 +94,8 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
              probes: dict, ports_spec: List[int],
              sqli_dict: dict,
              xss_payloads: List[dict],
-             upload_files: dict) -> Dict[str, List[Finding]]:
+             upload_files: dict,
+             rce_payloads: List[dict]) -> Dict[str, List[Finding]]:
     print(f"\n[*] 目标：{target}")
     started = time.time()
     result: Dict[str, List[Finding]] = {}
@@ -133,6 +135,11 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
         result["upload"] = upload.run(client, target, upload_files, verbose=args.verbose)
         print_findings(result["upload"])
 
+    if "rce" in args.modules:
+        print("  [命令注入检测]")
+        result["rce"] = rce.run(client, target, rce_payloads, verbose=args.verbose)
+        print_findings(result["rce"])
+
     print(f"  [完成] 用时 {time.time() - started:.2f}s")
     return result
 
@@ -147,10 +154,10 @@ def main(argv: List[str]) -> int:
         return 2
 
     modules = {m.strip().lower() for m in args.modules.split(",") if m.strip()}
-    unknown = modules - {"cms", "shiro", "ports", "sqli", "xss", "upload"}
+    unknown = modules - {"cms", "shiro", "ports", "sqli", "xss", "upload", "rce"}
     if unknown:
         print(f"[!] 未知模块：{', '.join(unknown)}"
-              f"（只支持 cms / shiro / ports / sqli / xss / upload）")
+              f"（只支持 cms / shiro / ports / sqli / xss / upload / rce）")
         return 2
 
     print("=" * 62)
@@ -165,6 +172,7 @@ def main(argv: List[str]) -> int:
     sqli_dict = sqli.load_payloads(args.sqli_dict) if "sqli" in modules else {}
     xss_payloads = xss.load_payloads(args.xss_dict) if "xss" in modules else []
     upload_files = upload.load_files(args.upload_dict) if "upload" in modules else {}
+    rce_payloads = rce.load_payloads(args.rce_dict) if "rce" in modules else []
     if "cms" in modules:
         print(f"[*] 已加载 CMS 指纹规则 {len(rules)} 条")
     if "shiro" in modules:
@@ -178,12 +186,15 @@ def main(argv: List[str]) -> int:
         print(f"[*] 已加载 XSS payload {len(xss_payloads)} 条")
     if "upload" in modules:
         print(f"[*] 已加载文件上传模板 {len(upload_files.get('files', []))} 条")
+    if "rce" in modules:
+        print(f"[*] 已加载命令注入 payload {len(rce_payloads)} 条")
 
     client = HttpClient(timeout=args.timeout)
     all_results: Dict[str, Dict[str, List[Finding]]] = {}
     for target in targets:
         all_results[target] = scan_one(client, target, args, rules, shiro_paths,
-                                       probes, ports_spec, sqli_dict, xss_payloads, upload_files)
+                                       probes, ports_spec, sqli_dict, xss_payloads, upload_files,
+                                       rce_payloads)
 
     if args.output:
         if args.output.lower().endswith((".html", ".htm")):

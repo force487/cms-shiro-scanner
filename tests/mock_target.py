@@ -26,6 +26,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <body><h1>My Site</h1><a href="/wp-json/wp/v2/posts">REST API</a>
 <a href="/search?id=1">站内搜索</a>
 <a href="/reflect?q=hello">留言板</a>
+<a href="/ping?host=127.0.0.1">网络诊断</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form></body>
@@ -100,6 +101,14 @@ class MockHandler(BaseHTTPRequestHandler):
             # 故意不转义，把 q 原样反射进 HTML —— 用来验证反射型 XSS 检测
             q = "".join(parse_qs(urlparse(self.path).query).get("q", []))
             self._send(200, f"<html><body><h1>留言板</h1><p>内容：{q}</p></body></html>")
+        elif path == "/ping":
+            # 故意把 host 参数拼进 shell 命令 —— 用来验证命令注入检测
+            host = "".join(parse_qs(urlparse(self.path).query).get("host", []))
+            m = re.search(r"echo\s+([a-z0-9]+)", host, re.IGNORECASE)
+            if m:
+                self._send(200, f"PING 结果：{m.group(1)} 可达（模拟命令执行）")
+            else:
+                self._send(200, f"PING {host or '127.0.0.1'}: 正常")
         elif path.startswith("/uploads/"):
             name = path.split("/")[-1]
             content = UPLOADED.get(name)

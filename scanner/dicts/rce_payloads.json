@@ -1,0 +1,10 @@
+{
+  "payloads": [
+    {"id": "semicolon", "name": "分号命令分隔", "template": "{value}; echo {marker}"},
+    {"id": "pipe", "name": "管道命令分隔", "template": "{value}| echo {marker}"},
+    {"id": "amp-and", "name": "&& 命令分隔", "template": "{value}&& echo {marker}"},
+    {"id": "amp-or", "name": "|| 命令分隔", "template": "{value}|| echo {marker}"},
+    {"id": "backtick", "name": "反引号命令替换", "template": "{value}`echo {marker}`"},
+    {"id": "subshell", "name": "$() 命令替换", "template": "$(echo {marker})"}
+  ]
+}
