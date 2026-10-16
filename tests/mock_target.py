@@ -33,6 +33,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/goto?url=http://example.com">跳转</a>
 <a href="/crlf?next=http://example.com">跳转(CRLF)</a>
 <a href="/pollute?q=guest">参数污染</a>
+<a href="/download?path=report.pdf">下载报告</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form>
@@ -193,6 +194,21 @@ class MockHandler(BaseHTTPRequestHandler):
             vals = parse_qs(urlparse(self.path).query).get("q", [])
             chosen = vals[-1] if vals else "guest"
             self._send(200, f"<html><body>当前配置值：{chosen}</body></html>")
+        elif path == "/download":
+            # 故意把 path 参数当本地文件路径读取 —— 用来验证路径遍历检测
+            fp = "".join(parse_qs(urlparse(self.path).query).get("path", []))
+            lowered = fp.lower()
+            if "passwd" in lowered:
+                self._send(200, "root:x:0:0:root:/root:/bin/bash\n"
+                                "nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin")
+            elif "hosts" in lowered:
+                self._send(200, "127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback")
+            elif "group" in lowered:
+                self._send(200, "root:x:0:\n")
+            elif "win.ini" in lowered or "boot.ini" in lowered:
+                self._send(200, "; for 16-bit app support\n[fonts]\n[extensions]\n[mci extensions]")
+            else:
+                self._send(200, "文件内容（模拟）：这是一份普通文档。")
         elif path in SENSITIVE_FILES:
             self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
