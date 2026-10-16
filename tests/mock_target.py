@@ -40,6 +40,9 @@ WORDPRESS_HOME = """<!DOCTYPE html>
   新密码<input name="new_password">
   <input type="hidden" name="csrf_token" value="s3cret-t0ken-123">
   <input type="submit" value="修改">
+</form>
+<form action="/xml" method="post">
+  XML 数据：<input type="text" name="xml" value=""><input type="submit" value="提交">
 </form></body>
 </html>
 """
@@ -191,6 +194,24 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(200, f"上传成功！文件保存在 /uploads/{filename}")
             else:
                 self._send(400, "上传失败：未解析到文件")
+        elif path == "/xml":
+            # 故意把 XML 里的外部实体解析成文件内容回显 —— 用来验证 XXE 检测
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = self.rfile.read(length).decode("utf-8", "replace")
+            m = re.search(r'file:///([^"]+)', body)
+            if not m:
+                self._send(400, "未解析到外部实体")
+                return
+            target = m.group(1).lower()
+            if "etc/passwd" in target:
+                self._send(200, "root:x:0:0:root:/root:/bin/bash\n"
+                                "nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin")
+            elif "etc/hosts" in target:
+                self._send(200, "127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback")
+            elif "win.ini" in target or "windows" in target:
+                self._send(200, "; for 16-bit app support\n[fonts]\n[extensions]\n[mci extensions]")
+            else:
+                self._send(200, "（模拟：无法读取该文件）")
         else:
             self._send(404, "<html><body>404 Not Found</body></html>")
 
