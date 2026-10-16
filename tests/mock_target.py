@@ -31,6 +31,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/view?file=about.txt">查看页面</a>
 <a href="/fetch?url=http://example.com">远程抓取</a>
 <a href="/goto?url=http://example.com">跳转</a>
+<a href="/crlf?next=http://example.com">跳转(CRLF)</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form>
@@ -167,6 +168,22 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(400, "缺少 url 参数")
             else:
                 self._send(302, "", extra={"Location": target_url})
+        elif path == "/crlf":
+            # 故意把 next 参数反射进 Location，不过滤 CRLF —— 用来验证 CRLF 注入
+            target = "".join(parse_qs(urlparse(self.path).query).get("next", []))
+            if "\r" in target or "\n" in target:
+                # 取第一个 CRLF 之后的“伪造响应头”，原样回显为真实响应头
+                injected = re.split(r"[\r\n]+", target, maxsplit=1)[-1]
+                if ":" in injected:
+                    key, val = injected.split(":", 1)
+                    self._send(302, "", extra={"Location": "/",
+                                               key.strip(): val.strip()})
+                else:
+                    self._send(302, "", extra={"Location": "/"})
+            elif target:
+                self._send(302, "", extra={"Location": target})
+            else:
+                self._send(400, "缺少 next 参数")
         elif path in SENSITIVE_FILES:
             self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
