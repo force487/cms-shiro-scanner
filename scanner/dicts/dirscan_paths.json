@@ -1,0 +1,12 @@
+{
+  "paths": [
+    {"path": "/.git/config", "name": "Git 仓库配置泄露", "check": "repositoryformatversion"},
+    {"path": "/.svn/entries", "name": "SVN 版本控制泄露", "check": "dir"},
+    {"path": "/.env", "name": "环境变量文件泄露", "check": "APP_KEY"},
+    {"path": "/phpinfo.php", "name": "PHP 信息泄露（phpinfo）", "check": "PHP Version"},
+    {"path": "/web.config", "name": "ASP.NET 配置泄露", "check": "configuration"},
+    {"path": "/robots.txt", "name": "robots.txt 泄露", "check": ""},
+    {"path": "/backup.zip", "name": "备份文件泄露", "check": ""},
+    {"path": "/admin", "name": "后台管理入口", "check": ""}
+  ]
+}
