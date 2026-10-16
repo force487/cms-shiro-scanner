@@ -1,0 +1,7 @@
+{
+  "payloads": [
+    {"id": "http", "name": "HTTP 绝对地址", "url": "http://evil-example.com/", "check": "evil-example.com"},
+    {"id": "https", "name": "HTTPS 绝对地址", "url": "https://evil-example.com/", "check": "evil-example.com"},
+    {"id": "scheme-relative", "name": "协议相对地址", "url": "//evil-example.com/", "check": "evil-example.com"}
+  ]
+}
