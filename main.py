@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Dict, List
 
-from scanner import cms, ports, report, shiro
+from scanner import cms, ports, report, shiro, sqli
 from scanner.fingerprint import load_rules, load_wordlist
 from scanner.http_client import HttpClient, normalize_url
 from scanner.models import Finding
@@ -39,13 +39,14 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help="目标 URL，可重复指定多个")
     parser.add_argument("-f", "--file", help="从文本文件读取目标 URL（一行一个）")
     parser.add_argument("-m", "--modules", default="cms,shiro,ports",
-                        help="要运行的模块，逗号分隔：cms,shiro,ports（默认全部）")
+                        help="要运行的模块，逗号分隔：cms,shiro,ports,sqli（默认 cms,shiro,ports）")
     parser.add_argument("--timeout", type=float, default=8.0, help="单次请求超时秒数")
     parser.add_argument("--cms-dict", help="自定义 CMS 指纹字典路径")
     parser.add_argument("--shiro-dict", help="自定义 Shiro 路径字典路径")
     parser.add_argument("-p", "--ports", help="要扫描的端口，如 80,443,3306 或 1-1000")
     parser.add_argument("--port-threads", type=int, default=200, help="端口扫描并发线程数")
     parser.add_argument("--service-dict", help="自定义服务探测字典路径")
+    parser.add_argument("--sqli-dict", help="自定义 SQL 注入 payload 字典路径")
     parser.add_argument("--min-score", type=int, default=2,
                         help="CMS 模块最低输出分数（默认 2）")
     parser.add_argument("-o", "--output",
@@ -87,7 +88,8 @@ def print_findings(findings: List[Finding]) -> None:
 
 def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
              rules: List[dict], shiro_paths: List[str],
-             probes: dict, ports_spec: List[int]) -> Dict[str, List[Finding]]:
+             probes: dict, ports_spec: List[int],
+             sqli_dict: dict) -> Dict[str, List[Finding]]:
     print(f"\n[*] 目标：{target}")
     started = time.time()
     result: Dict[str, List[Finding]] = {}
@@ -112,6 +114,11 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
         )
         print_findings(result["ports"])
 
+    if "sqli" in args.modules:
+        print("  [SQL 注入检测]")
+        result["sqli"] = sqli.run(client, target, sqli_dict, verbose=args.verbose)
+        print_findings(result["sqli"])
+
     print(f"  [完成] 用时 {time.time() - started:.2f}s")
     return result
 
@@ -126,9 +133,9 @@ def main(argv: List[str]) -> int:
         return 2
 
     modules = {m.strip().lower() for m in args.modules.split(",") if m.strip()}
-    unknown = modules - {"cms", "shiro", "ports"}
+    unknown = modules - {"cms", "shiro", "ports", "sqli"}
     if unknown:
-        print(f"[!] 未知模块：{', '.join(unknown)}（只支持 cms / shiro / ports）")
+        print(f"[!] 未知模块：{', '.join(unknown)}（只支持 cms / shiro / ports / sqli）")
         return 2
 
     print("=" * 62)
@@ -140,18 +147,22 @@ def main(argv: List[str]) -> int:
     shiro_paths = load_wordlist(args.shiro_dict) if "shiro" in modules else []
     probes = ports.load_probes(args.service_dict) if "ports" in modules else {}
     ports_spec = ports.parse_ports(args.ports) if "ports" in modules else None
+    sqli_dict = sqli.load_payloads(args.sqli_dict) if "sqli" in modules else {}
     if "cms" in modules:
         print(f"[*] 已加载 CMS 指纹规则 {len(rules)} 条")
     if "shiro" in modules:
         print(f"[*] 已加载 Shiro 探测路径 {len(shiro_paths)} 条")
     if "ports" in modules:
         print(f"[*] 已加载服务探测规则 {len(probes.get('map', {}))} 条")
+    if "sqli" in modules:
+        print(f"[*] 已加载 SQL 注入 payload {len(sqli_dict.get('payloads', []))} 条"
+              f" / 报错特征 {len(sqli_dict.get('error_patterns', []))} 条")
 
     client = HttpClient(timeout=args.timeout)
     all_results: Dict[str, Dict[str, List[Finding]]] = {}
     for target in targets:
         all_results[target] = scan_one(client, target, args, rules, shiro_paths,
-                                       probes, ports_spec)
+                                       probes, ports_spec, sqli_dict)
 
     if args.output:
         if args.output.lower().endswith((".html", ".htm")):

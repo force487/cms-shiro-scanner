@@ -14,7 +14,7 @@
 
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 WORDPRESS_HOME = """<!DOCTYPE html>
 <html><head>
@@ -22,7 +22,8 @@ WORDPRESS_HOME = """<!DOCTYPE html>
   <link rel="stylesheet" href="/wp-content/themes/twentytwentyfour/style.css" />
   <script src="/wp-includes/js/jquery/jquery.min.js"></script>
 </head>
-<body><h1>My Site</h1><a href="/wp-json/wp/v2/posts">REST API</a></body>
+<body><h1>My Site</h1><a href="/wp-json/wp/v2/posts">REST API</a>
+<a href="/search?id=1">站内搜索</a></body>
 </html>
 """
 
@@ -53,6 +54,17 @@ class MockHandler(BaseHTTPRequestHandler):
             self._send(200, WORDPRESS_HOME, extra={"X-Powered-By": "PHP/8.1.27"})
         elif path == "/wp-login.php":
             self._send(200, WP_LOGIN)
+        elif path == "/search":
+            # 故意留一个 SQL 注入点：参数值混入 SQL 特征时回显数据库报错
+            id_value = "".join(parse_qs(urlparse(self.path).query).get("id", []))
+            lowered = id_value.lower()
+            if ("'" in id_value or "updatexml" in lowered or "extractvalue" in lowered
+                    or "union" in lowered or "order by" in lowered):
+                self._send(500, "You have an error in your SQL syntax; check the "
+                                "manual that corresponds to your MySQL server "
+                                "version for the right syntax to use near ''' at line 1")
+            else:
+                self._send(200, "<html><body><h1>搜索结果</h1><p>没有找到相关记录。</p></body></html>")
         elif path in ("/login", "/admin/login", "/doLogin", "/user/login"):
             if has_delete_me:
                 # Shiro 命中 deleteMe 时的经典表现：回写 deleteMe 并 302
