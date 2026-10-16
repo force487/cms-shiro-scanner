@@ -32,6 +32,14 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/fetch?url=http://example.com">远程抓取</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
+</form>
+<form action="/transfer" method="post">
+  转账：账号<input name="account"> 金额<input name="amount"><input type="submit" value="转账">
+</form>
+<form action="/change-password" method="post">
+  新密码<input name="new_password">
+  <input type="hidden" name="csrf_token" value="s3cret-t0ken-123">
+  <input type="submit" value="修改">
 </form></body>
 </html>
 """
