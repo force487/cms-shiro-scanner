@@ -1,0 +1,6 @@
+{
+  "payloads": [
+    {"id": "custom-header", "name": "注入自定义响应头", "value": "%0d%0aX-CRLF-Test:injected", "check_header": "x-crlf-test", "check_value": "injected"},
+    {"id": "set-cookie", "name": "注入 Set-Cookie", "value": "%0d%0aSet-Cookie:crlf=injected", "check_header": "set-cookie", "check_value": "crlf=injected"}
+  ]
+}
