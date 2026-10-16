@@ -16,7 +16,7 @@ import sys
 import time
 from typing import Dict, List
 
-from scanner import cms, crlf, csrf, dirscan, headers, hpp, lfi, ports, rce, redirect, report, shiro, sqli, ssrf, upload, xss, xxe
+from scanner import cms, crlf, csrf, dirscan, headers, hpp, lfi, ports, rce, redirect, report, shiro, sqli, ssrf, traversal, upload, xss, xxe
 from scanner.fingerprint import load_rules, load_wordlist
 from scanner.http_client import HttpClient, normalize_url
 from scanner.models import Finding
@@ -39,7 +39,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                         help="目标 URL，可重复指定多个")
     parser.add_argument("-f", "--file", help="从文本文件读取目标 URL（一行一个）")
     parser.add_argument("-m", "--modules", default="cms,shiro,ports",
-                        help="要运行的模块，逗号分隔：cms,shiro,ports,sqli,xss,upload,rce,lfi,dirscan,ssrf,csrf,xxe,redirect,crlf,hpp,headers（默认 cms,shiro,ports）")
+                        help="要运行的模块，逗号分隔：cms,shiro,ports,sqli,xss,upload,rce,lfi,dirscan,ssrf,csrf,xxe,redirect,crlf,hpp,headers,traversal（默认 cms,shiro,ports）")
     parser.add_argument("--timeout", type=float, default=8.0, help="单次请求超时秒数")
     parser.add_argument("--cms-dict", help="自定义 CMS 指纹字典路径")
     parser.add_argument("--shiro-dict", help="自定义 Shiro 路径字典路径")
@@ -59,6 +59,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--crlf-dict", help="自定义 CRLF 注入 payload 字典路径")
     parser.add_argument("--hpp-dict", help="自定义 HPP 检测配置路径")
     parser.add_argument("--headers-dict", help="自定义安全响应头规则字典路径")
+    parser.add_argument("--traversal-dict", help="自定义路径遍历 payload 字典路径")
     parser.add_argument("--min-score", type=int, default=2,
                         help="CMS 模块最低输出分数（默认 2）")
     parser.add_argument("-o", "--output",
@@ -113,7 +114,8 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
              redirect_payloads: List[dict],
              crlf_payloads: List[dict],
              hpp_config: dict,
-             headers_rules: List[dict]) -> Dict[str, List[Finding]]:
+             headers_rules: List[dict],
+             traversal_config: dict) -> Dict[str, List[Finding]]:
     print(f"\n[*] 目标：{target}")
     started = time.time()
     result: Dict[str, List[Finding]] = {}
@@ -203,6 +205,11 @@ def scan_one(client: HttpClient, target: str, args: argparse.Namespace,
         result["headers"] = headers.run(client, target, headers_rules, verbose=args.verbose)
         print_findings(result["headers"])
 
+    if "traversal" in args.modules:
+        print("  [路径遍历检测]")
+        result["traversal"] = traversal.run(client, target, traversal_config, verbose=args.verbose)
+        print_findings(result["traversal"])
+
     print(f"  [完成] 用时 {time.time() - started:.2f}s")
     return result
 
@@ -217,10 +224,10 @@ def main(argv: List[str]) -> int:
         return 2
 
     modules = {m.strip().lower() for m in args.modules.split(",") if m.strip()}
-    unknown = modules - {"cms", "shiro", "ports", "sqli", "xss", "upload", "rce", "lfi", "dirscan", "ssrf", "csrf", "xxe", "redirect", "crlf", "hpp", "headers"}
+    unknown = modules - {"cms", "shiro", "ports", "sqli", "xss", "upload", "rce", "lfi", "dirscan", "ssrf", "csrf", "xxe", "redirect", "crlf", "hpp", "headers", "traversal"}
     if unknown:
         print(f"[!] 未知模块：{', '.join(unknown)}"
-              f"（只支持 cms / shiro / ports / sqli / xss / upload / rce / lfi / dirscan / ssrf / csrf / xxe / redirect / crlf / hpp / headers）")
+              f"（只支持 cms / shiro / ports / sqli / xss / upload / rce / lfi / dirscan / ssrf / csrf / xxe / redirect / crlf / hpp / headers / traversal）")
         return 2
 
     print("=" * 62)
@@ -245,6 +252,7 @@ def main(argv: List[str]) -> int:
     crlf_payloads = crlf.load_payloads(args.crlf_dict) if "crlf" in modules else []
     hpp_config = hpp.load_config(args.hpp_dict) if "hpp" in modules else {}
     headers_rules = headers.load_headers(args.headers_dict) if "headers" in modules else []
+    traversal_config = traversal.load_payloads(args.traversal_dict) if "traversal" in modules else {}
     if "cms" in modules:
         print(f"[*] 已加载 CMS 指纹规则 {len(rules)} 条")
     if "shiro" in modules:
@@ -278,6 +286,9 @@ def main(argv: List[str]) -> int:
         print(f"[*] 已加载 HPP 检测配置")
     if "headers" in modules:
         print(f"[*] 已加载安全响应头规则 {len(headers_rules)} 条")
+    if "traversal" in modules:
+        print(f"[*] 已加载路径遍历 payload {len(traversal_config.get('payloads', []))} 条"
+              f" / 路径参数特征 {len(traversal_config.get('path_params', []))} 个")
 
     client = HttpClient(timeout=args.timeout)
     all_results: Dict[str, Dict[str, List[Finding]]] = {}
@@ -286,7 +297,7 @@ def main(argv: List[str]) -> int:
                                        probes, ports_spec, sqli_dict, xss_payloads, upload_files,
                                        rce_payloads, lfi_payloads, dirscan_paths, ssrf_payloads,
                                        csrf_config, xxe_payloads, redirect_payloads,
-                                       crlf_payloads, hpp_config, headers_rules)
+                                       crlf_payloads, hpp_config, headers_rules, traversal_config)
 
     if args.output:
         if args.output.lower().endswith((".html", ".htm")):
