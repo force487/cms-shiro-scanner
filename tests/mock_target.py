@@ -23,7 +23,8 @@ WORDPRESS_HOME = """<!DOCTYPE html>
   <script src="/wp-includes/js/jquery/jquery.min.js"></script>
 </head>
 <body><h1>My Site</h1><a href="/wp-json/wp/v2/posts">REST API</a>
-<a href="/search?id=1">站内搜索</a></body>
+<a href="/search?id=1">站内搜索</a>
+<a href="/reflect?q=hello">留言板</a></body>
 </html>
 """
 
@@ -65,6 +66,10 @@ class MockHandler(BaseHTTPRequestHandler):
                                 "version for the right syntax to use near ''' at line 1")
             else:
                 self._send(200, "<html><body><h1>搜索结果</h1><p>没有找到相关记录。</p></body></html>")
+        elif path == "/reflect":
+            # 故意不转义，把 q 原样反射进 HTML —— 用来验证反射型 XSS 检测
+            q = "".join(parse_qs(urlparse(self.path).query).get("q", []))
+            self._send(200, f"<html><body><h1>留言板</h1><p>内容：{q}</p></body></html>")
         elif path in ("/login", "/admin/login", "/doLogin", "/user/login"):
             if has_delete_me:
                 # Shiro 命中 deleteMe 时的经典表现：回写 deleteMe 并 302
