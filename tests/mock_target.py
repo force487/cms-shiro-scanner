@@ -27,6 +27,7 @@ WORDPRESS_HOME = """<!DOCTYPE html>
 <a href="/search?id=1">站内搜索</a>
 <a href="/reflect?q=hello">留言板</a>
 <a href="/ping?host=127.0.0.1">网络诊断</a>
+<a href="/view?file=about.txt">查看页面</a>
 <form action="/upload" method="post" enctype="multipart/form-data">
   上传：<input type="file" name="file"><input type="submit" value="上传">
 </form></body>
@@ -49,6 +50,18 @@ SHIRO_LOGIN = """<html><head><title>若依后台管理系统</title></head>
 
 # 保存上传的文件，模拟"上传后可通过 /uploads/<name> 访问并执行"
 UPLOADED = {}
+
+# 敏感路径内容，模拟"泄露的敏感文件 / 目录"
+SENSITIVE_FILES = {
+    "/.git/config": "[core]\n\trepositoryformatversion = 0\n\tfilemode = true",
+    "/.svn/entries": "12\ndir\n2026-01-01T00:00:00.000000Z\n",
+    "/.env": "APP_NAME=Laravel\nAPP_KEY=base64:abcdef0123456789\n",
+    "/phpinfo.php": "phpinfo()\nPHP Version 8.1.27\nSystem: Windows NT",
+    "/web.config": "<configuration>\n  <system.webServer>\n  </system.webServer>\n</configuration>",
+    "/robots.txt": "User-agent: *\nDisallow: /admin\n",
+    "/backup.zip": "PK (zip 二进制占位)",
+    "/admin": "<html><body><h1>后台管理</h1></body></html>",
+}
 
 
 def parse_multipart(body, content_type):
@@ -109,6 +122,21 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._send(200, f"PING 结果：{m.group(1)} 可达（模拟命令执行）")
             else:
                 self._send(200, f"PING {host or '127.0.0.1'}: 正常")
+        elif path == "/view":
+            # 故意把 file 参数当文件路径读取 —— 用来验证文件包含检测
+            f = "".join(parse_qs(urlparse(self.path).query).get("file", []))
+            lowered = f.lower()
+            if "passwd" in lowered:
+                self._send(200, "root:x:0:0:root:/root:/bin/bash\n"
+                                "nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin")
+            elif "hosts" in lowered:
+                self._send(200, "127.0.0.1 localhost\n::1 localhost ip6-localhost ip6-loopback")
+            elif "win.ini" in lowered or "windows" in lowered:
+                self._send(200, "; for 16-bit app support\n[fonts]\n[extensions]\n[mci extensions]")
+            else:
+                self._send(200, "<html><body><h1>关于我们</h1><p>这是静态页面内容。</p></body></html>")
+        elif path in SENSITIVE_FILES:
+            self._send(200, SENSITIVE_FILES[path])
         elif path.startswith("/uploads/"):
             name = path.split("/")[-1]
             content = UPLOADED.get(name)
